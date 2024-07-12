@@ -11,12 +11,14 @@ import tempfile
 
 app = Flask(__name__)
 
+# 혹시 몰라 백업해야하면 사용하려고
 UPLOAD_FOLDER = './uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/voice', methods = ['GET', 'POST'])
 def voice_scoring():
+     # 테스트
      video_file = request.files['file']
      print(video_file)
      print("LOCAL FILE: FORM DATA RECEIVED")
@@ -85,11 +87,7 @@ def voice_scoring():
           penalty_speed = min(penalty_speed, base_score)
           
           # 최종 점수 계산
-          final_intj = base_score - penalty_speed
-     
-     result['voice_level'] = voice_level
-     result['voice_speed'] = voice_speed
-     result['voice_intj'] = voice_intj
+          final_speed = base_score - penalty_speed
      
      # level:speed:intj=3:4:3 비율로 계산해서 voice_score 저장 필요
      
@@ -121,10 +119,14 @@ def voice_scoring():
      # 최종 점수 계산
      voice_score = final_level*0.3 + final_speed*0.4 + final_intj*0.3
      
+     result['voice_level'] = final_level
+     result['voice_speed'] = final_speed
+     result['voice_intj'] = final_intj
      result['voice_score'] = voice_score
      
      response = json.dumps(result, indent=4, ensure_ascii=False)
      print(response)
+     print(type(response))
      
      return response
 
