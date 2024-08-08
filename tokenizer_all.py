@@ -2,6 +2,8 @@ from kiwipiepy import Kiwi
 import spacy
 import string
 
+nlp = spacy.load("en_core_web_trf")
+
 def interjection_ko(input):
     kiwi = Kiwi()
     result = kiwi.tokenize(input)
@@ -13,7 +15,6 @@ def interjection_ko(input):
     return intj_cnt_ko
 
 def interjection_en(input):
-    nlp = spacy.load("en_core_web_trf")
     doc = nlp(input)
     intj_cnt_en = 0
     for token in doc:
@@ -28,8 +29,7 @@ def tokenizer_ko(input):
     return syllable_count
 
 def tokenizer_en(input):
-    nlp = spacy.load("en_core_web_trf")
     doc = nlp(input)
-    word_count = len([token for token in doc if not token.is_punct and not token.is_space])
-    print(word_count)
+    # word_count = len([token for token in doc if not token.is_punct and not token.is_space])
+    word_count = sum(1 for token in doc if not token.is_punct and not token.is_space)
     return word_count

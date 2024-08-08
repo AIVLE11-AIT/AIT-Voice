@@ -2,14 +2,25 @@ import ffmpeg
 import re
 
 def extract_audio(input_video_path, output_audio_path):
-    print(type(input_video_path), type(output_audio_path))
-    
-    ffmpeg.input(input_video_path).output(output_audio_path).overwrite_output().run()
+    try:
+        probe = ffmpeg.probe(input_video_path)
+        has_audio = any(stream for stream in probe['streams'] if stream['codec_type'] == 'audio')
+        
+        if not has_audio:
+            raise ValueError(f"입력 파일 {input_video_path}에 오디오 스트림이 없습니다.")
+        
+        ffmpeg.input(input_video_path).output(output_audio_path).overwrite_output().run()
+        print(f"저장된 오디오 파일 경로: {output_audio_path}")
+    except ffmpeg.Error as e:
+        print("FFmpeg 오류:", e)
+        print("FFmpeg stderr 출력:", e.stderr.decode())
+        raise
+    except ValueError as ve:
+        print("ValueError:", ve)
+        raise
 
-    print(f"SAVED AUDIO FILE PATH: {output_audio_path}")
 
-
-def get_mean_volume(audio_file, log=True):
+def get_mean_volume(audio_file, log=False):
     try:
         # ffmpeg-python을 사용하여 FFmpeg 명령어를 설정 및 실행
         _, out = (

@@ -4,10 +4,11 @@ from speech_rate import *
 from tokenizer_all import *
 from audio_preprocessing import *
 from flask import Flask, render_template, request, redirect, jsonify
-import json 
+import json
 import os 
 from werkzeug.utils import secure_filename
 import tempfile
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -19,27 +20,57 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 @app.route('/voice', methods = ['GET', 'POST'])
 def voice_scoring():
      # 테스트
+     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+     print(f'{current_time} - 시작')
      video_file = request.files['file']
      print(video_file)
      print("LOCAL FILE: FORM DATA RECEIVED")
           
-     # post 테스트용. mp4 임시로 저장.
-     with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_video_file:
+     # post 테스트용. webm 임시로 저장.
+     with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp_video_file:
           video_file.save(tmp_video_file.name)
           input_video_path = tmp_video_file.name
           
      videoname = secure_filename(video_file.filename)
      filename = videoname.split('.')[0]+'.wav'
      audio_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-     extract_audio(input_video_path, audio_path)
-
+     
+     try:
+        extract_audio(input_video_path, audio_path)
+     
+     except (ffmpeg.Error, ValueError) as e:
+        result = {
+            'language': None,
+            'inference': None,
+            'voice_level': 0,
+            'voice_speed': 0,
+            'voice_intj': 0,
+            'voice_score': 0
+        }
+        response = json.dumps(result, indent=4, ensure_ascii=False)
+        return response
+   
      result = {}
 
      lang, text = whisper_inference(audio_path)
-     
+     language = ['korean', 'english','en', 'eng']
+     if not text or (lang not in language):
+          result = {
+            'language': None,
+            'inference': None,
+            'voice_level': 0,
+            'voice_speed': 0,
+            'voice_intj': 0,
+            'voice_score': 0
+          }
+          response = json.dumps(result, indent=4, ensure_ascii=False)
+          
+          return result
+          
      result['language'] = lang
      result['inference'] = text
-     
+     print(f"Inference result - Language: {lang}, Text: {text}") 
+
      audio, sample_rate = librosa.load(audio_path, sr=None)
      print("audio, sample_rate: ", audio, sample_rate)
 
@@ -50,7 +81,7 @@ def voice_scoring():
      base_score = 100
 
      # 언어는 한(ko), 영(en)만 제공할 거라서 만약 한국어가 아니라면 당연히 영어
-     if lang == 'ko':
+     if lang == 'korean':
           voice_intj = interjection_ko(text)
           syllable_count = tokenizer_ko(text)
           voice_speed = speech_rate_ko(duration, syllable_count)
@@ -68,8 +99,11 @@ def voice_scoring():
           final_speed = base_score - penalty_speed
 
      else:
+          print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), '- 습관어')
           voice_intj = interjection_en(text)
+          print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), '- 토크나이징')
           word_count = tokenizer_en(text)
+          print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), f'- 발화속도')
           voice_speed = speech_rate_en(duration, word_count)
           
           # speed 벌점 계산
@@ -88,11 +122,9 @@ def voice_scoring():
           
           # 최종 점수 계산
           final_speed = base_score - penalty_speed
-     
-     # level:speed:intj=3:4:3 비율로 계산해서 voice_score 저장 필요
-     
+          
      # level 벌점 계산
-     lower_level, upper_level = -25, -10
+     lower_level, upper_level = -20, -10
     
      # 벌점 계산
      if voice_level < lower_level:
@@ -103,7 +135,7 @@ def voice_scoring():
           else:
                penalty_level = min(100, (voice_level - upper_level) * 2)
      else:
-          penalty_level = 0  # 범위(-25~-10) 내에 속하면 벌점X
+          penalty_level = 0  # 범위(-20~-10) 내에 속하면 벌점X
 
      final_level = base_score - penalty_level
 
@@ -117,7 +149,11 @@ def voice_scoring():
      final_intj = base_score - penalty_intj
      
      # 최종 점수 계산
-     voice_score = final_level*0.3 + final_speed*0.4 + final_intj*0.3
+     final_level *= 0.3
+     final_speed *= 0.4
+     final_intj *= 0.3
+     
+     voice_score = final_level + final_speed + final_intj
      
      result['voice_level'] = final_level
      result['voice_speed'] = final_speed
@@ -126,9 +162,9 @@ def voice_scoring():
      
      response = json.dumps(result, indent=4, ensure_ascii=False)
      print(response)
-     print(type(response))
+     # print(type(response))
      
      return response
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=6000, debug=True)
