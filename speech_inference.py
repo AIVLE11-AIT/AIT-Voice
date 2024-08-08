@@ -1,7 +1,7 @@
 from openai import OpenAI
 
 
-OPENAI_API_KEY = "sk-proj-b2x05FmtNy1Q2cfocAUGT3BlbkFJvmLMXpUHJM5TXCyb7o95"
+OPENAI_API_KEY = "your_key"
 
 
 def whisper_inference(audio_file):
