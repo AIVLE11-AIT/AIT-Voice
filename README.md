@@ -7,7 +7,7 @@ Whisper로 음성인식 후 자체 알고리즘으로 음성 분석 진행
 1. 클론
 ```Json
 {
-    git clonehttps://github.com/AIVLE11-AIT/AIT-Voice.git
+git clonehttps://github.com/AIVLE11-AIT/AIT-Voice.git
 }
 ```
 
